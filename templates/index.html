@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+
+    <title>Chat Application</title>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"
+        integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA=="
+        crossorigin="anonymous"></script>
+    <script type="text/javascript" charset="utf-8">
+        const socket = io();
+
+        // State variables
+        let State = {
+            username: null,
+            channel: null,
+            channels: [],
+            messages: []
+        };
+
+        // Updater
+        function setState(newState) {
+            State = newState;
+            render();
+        }
+
+        // Element Creator
+        function el(tagName, props, ...nodes) {
+            const element = document.createElement(tagName);
+
+            // Add the properties
+            for (let key in props) {
+                if (key.startsWith('on')) {
+                    // This is an event 
+                    element[key] = props[key];
+                } else if (typeof (props[key]) === 'boolean') {
+                    // This is a true/false attribute
+                    if (props[key]) {
+                        element.setAttribute(key, "");
+                    } else {
+                        element.removeAttribute(key);
+                    }
+                } else if (key === 'className') {
+                    // Setting class
+                    element.className = props[key];
+                } else {
+                    // General attribute
+                    element.setAttribute(key, props[key] || "");
+                }
+            }
+
+            // Append children
+            element.append(...nodes);
+
+            return element;
+        }
+
+        // Components
+        function Channel(channel) {
+            const onClick = () => {
+                socket.emit('join', { username: State.username, channel: channel });
+            };
+
+            return el('button', { type: 'button', className: `btn ${channel == State.channel ? 'btn-primary' : 'btn-secondary'} w-100`, onclick: onClick }, channel)
+        }
+
+        function OpenChannel() {
+            const onClick = () => {
+                const channel = prompt('Open channel:') || "";
+
+                if (channel.length > 0)
+                    socket.emit('open', { channel: channel });
+            };
+
+            return el('button', { type: 'button', className: 'btn btn-info w-100', onclick: onClick }, 'Open Channel');
+        }
+
+        function Channels() {
+            return el('div', {},
+                el('h4', {}, 'Channels'),
+                el('div', { className: 'mt-1' },
+                    OpenChannel()
+                ),
+                el('div', {},
+                    ...State.channels.map((c) =>
+                        el('div', { className: 'mt-1' }, Channel(c))
+                    )
+                )
+            );
+        }
+
+        function Message({ username, timestamp, message }) {
+            const msgTimestamp = new Date(timestamp);
+
+            // Event handlers
+            const onClick = () => {
+                if (confirm('Are you sure?')) {
+                    socket.emit('delete', { username: username, timestamp: timestamp, message: message, channel: State.channel });
+                }
+            };
+
+            return el('div', {},
+                el('b', {}, username),
+                el('span', { className: 'ms-3' }, msgTimestamp.toLocaleString()),
+                State.username == username ? el('button', { type: 'button', className: 'btn btn-danger float-end', onclick: onClick }, 'Delete') : '',
+                el('p', {}, message)
+            );
+        }
+
+        function Messages() {
+            return el('div', { className: 'msgs', style: 'height: 75vh; overflow-y: auto;' }, ...State.messages.map(m => Message(m)));
+        }
+
+        function SendForm() {
+            let message;
+
+            // Event handlers
+            const onChange = (e) => {
+                message = e.target.value;
+            }
+
+            const onSubmit = () => {
+                socket.emit('send', {
+                    username: State.username,
+                    message: message
+                });
+                return false;
+            }
+
+            // Render the form 
+            return el('div', {},
+                el('form', { className: 'row', onsubmit: onSubmit },
+                    el('div', { className: 'col-11' },
+                        el('input', { className: 'form-control msg', placeholder: 'Message', required: true, onchange: onChange })
+                    ),
+                    el('div', { className: 'col-1' },
+                        el('button', { type: 'submit', className: 'btn btn-primary' }, 'Send')
+                    )
+                )
+            );
+        }
+
+        function LogoutButton() {
+            // Event handlers
+            const onClick = () => {
+                if (confirm('Are you sure?'))
+                    socket.emit('logout', { username: State.username });
+            };
+
+            return el('button', { type: 'button', className: 'btn btn-danger float-end', onclick: onClick }, 'Logout');
+        }
+
+        function LeaveButton() {
+            // Event handlers
+            const onClick = () => {
+                if (confirm('Are you sure?'))
+                    socket.emit('leave', { username: State.username });
+            };
+
+            return el('button', { type: 'button', className: 'btn btn-danger float-end', onclick: onClick }, 'Leave Channel');
+        }
+
+        function Header() {
+            return el('div', { className: 'row' },
+                el('div', { className: 'col' },
+                    el('h1', {},
+                        `Welcome ${State.username}!`,
+                        LogoutButton()
+                    )
+                )
+            );
+        }
+
+        function LoginPage() {
+            // Get saved username in local storage
+            let username = localStorage.getItem('username');
+
+            if (username != null) {
+                socket.emit('login', { username: username });
+            }
+
+            // Event handlers
+            const onChange = (e) => {
+                username = e.target.value;
+            }
+
+            const onSubmit = () => {
+                socket.emit('login', { username: username });
+                return false;
+            }
+
+            // Render the form
+            return el('div', { className: 'row' },
+                el('div', { className: 'col-3' }),
+                el('form', { className: 'col-6', onsubmit: onSubmit },
+                    el('div', { className: 'mb-3' },
+                        el('h1', {}, 'Login')
+                    ),
+                    el('div', { className: 'mb-3' },
+                        el('label', { className: 'form-label' }, 'Username'),
+                        el('input', { className: 'form-control', required: true, value: username, onchange: onChange })
+                    ),
+                    el('button', { type: 'submit', className: 'btn btn-primary' }, 'Login')
+                ),
+                el('div', { className: 'col-3' })
+            );
+        }
+
+        function Messaging() {
+            return (State.channel == null) ?
+                el('div', {}) :
+                el('div', {},
+                    el('h3', {},
+                        `Channel: ${State.channel}`,
+                        LeaveButton()
+                    ),
+                    Messages(),
+                    SendForm()
+                );
+        }
+
+        function App() {
+            return (State.username == null) ?
+                el('div', { className: 'container' }, LoginPage()) :
+                el('div', { className: 'container' },
+                    el('div', { className: 'row' },
+                        el('div', { className: 'col' }, Header())
+                    ),
+                    el('div', { className: 'row' },
+                        el('div', { className: 'col-3 border-end' },
+                            Channels()
+                        ),
+                        el('div', { className: 'col-9' },
+                            Messaging()
+                        )
+                    )
+                );
+        }
+
+        function render() {
+            // Render the whole UI 
+            const rootEl = document.getElementById('root');
+            rootEl.innerHTML = '';
+            rootEl.appendChild(App());
+
+            // Perform some 
+            const msgs = document.querySelector('.msgs');
+            if (msgs != null) {
+                msgs.scrollTo(0, msgs.scrollHeight);
+            }
+
+            const msg = document.querySelector('input.msg');
+            if (msg != null) {
+                msg.focus();
+            }
+        }
+
+        // Register events 
+        socket.on('login', function ({ username, channel, channels }) {
+            setState({
+                ...State,
+                username: username,
+                channel: channel,
+                channels: channels
+            });
+
+            if (State.channel != null) {
+                socket.emit('join', { username: State.username, channel: State.channel });
+            }
+
+            if (State.username != null) {
+                localStorage.setItem('username', State.username);
+            }
+        });
+
+        socket.on('join', function ({ channel, messages }) {
+            setState({
+                ...State,
+                channel: channel,
+                messages: messages
+            });
+        });
+
+        socket.on('open', function ({ channel }) {
+            setState({
+                ...State,
+                channels: [...State.channels, channel]
+            });
+        });
+
+        socket.on('send', function (message) {
+            setState({
+                ...State,
+                messages: [...State.messages, message]
+            });
+        });
+
+        socket.on('connect', function () {
+            setState({
+                ...State
+            });
+        });
+
+        socket.on('leave', function () {
+            setState({
+                ...State,
+                channel: null,
+                messages: []
+            });
+        });
+
+        socket.on('logout', function () {
+            localStorage.removeItem('username');
+
+            setState({
+                ...State,
+                username: null,
+                channel: null
+            });
+        });
+
+        socket.on('delete', function (data) {
+            const messages = State.messages.filter((m) => !(data.username == m.username && data.message == m.message && data.timestamp == m.timestamp));
+
+            setState({
+                ...State, 
+                messages: messages
+            });
+        });
+    </script>
+</body>
+
+</html>

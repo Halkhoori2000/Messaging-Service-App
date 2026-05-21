@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Messaging Service App — Showcase</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0d1117; color: #e6edf3; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; }
+    a { color: #58a6ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header { background: #161b22; border-bottom: 1px solid #30363d; padding: 24px 32px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+    header h1 { font-size: 1.4rem; font-weight: 600; }
+    header .subtitle { font-size: 0.85rem; color: #8b949e; margin-top: 2px; }
+    .header-links { display: flex; gap: 12px; }
+    .btn { display: inline-block; padding: 8px 18px; border-radius: 6px; font-size: 0.9rem; font-weight: 500; border: none; text-decoration: none; }
+    .btn:hover { opacity: 0.85; text-decoration: none; }
+    .btn-secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
+    main { max-width: 960px; margin: 0 auto; padding: 48px 24px; }
+    .hero { text-align: center; margin-bottom: 56px; }
+    .hero h2 { font-size: 2.2rem; font-weight: 700; margin-bottom: 12px; }
+    .hero p { font-size: 1.05rem; color: #8b949e; max-width: 640px; margin: 0 auto 28px; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 20px; }
+    .badge { background: #161b22; border: 1px solid #30363d; border-radius: 20px; padding: 4px 12px; font-size: 0.78rem; color: #8b949e; }
+    section { margin-bottom: 56px; }
+    section h3 { font-size: 1.2rem; font-weight: 600; margin-bottom: 20px; padding-bottom: 8px; border-bottom: 1px solid #21262d; }
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .feature-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; }
+    .feature-card .icon { font-size: 1.5rem; margin-bottom: 10px; }
+    .feature-card h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 6px; }
+    .feature-card p { font-size: 0.85rem; color: #8b949e; }
+    .schema-block { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.82rem; color: #79c0ff; overflow-x: auto; }
+    .schema-block .comment { color: #484f58; }
+    footer { text-align: center; padding: 32px; border-top: 1px solid #21262d; color: #484f58; font-size: 0.85rem; }
+
+    /* Chat UI mockup */
+    .screen { background: #161b22; border: 1px solid #30363d; border-radius: 10px; overflow: hidden; }
+    .screen-bar { background: #21262d; padding: 10px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #30363d; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-r { background: #f85149; } .dot-y { background: #d29922; } .dot-g { background: #3fb950; }
+    .screen-bar .url { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.75rem; color: #8b949e; margin-left: 10px; }
+    .chat-layout { display: grid; grid-template-columns: 220px 1fr; height: 420px; }
+    @media (max-width: 600px) { .chat-layout { grid-template-columns: 1fr; height: auto; } }
+    .sidebar { background: #0d1117; border-right: 1px solid #21262d; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+    .sidebar h5 { font-size: 0.78rem; color: #484f58; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .channel-btn { background: #21262d; border: 1px solid #30363d; border-radius: 6px; padding: 7px 12px; font-size: 0.82rem; color: #8b949e; cursor: default; text-align: left; }
+    .channel-btn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+    .new-channel-btn { background: transparent; border: 1px dashed #30363d; border-radius: 6px; padding: 7px 12px; font-size: 0.82rem; color: #484f58; cursor: default; text-align: left; }
+    .chat-main { display: flex; flex-direction: column; }
+    .chat-header { padding: 12px 16px; border-bottom: 1px solid #21262d; display: flex; justify-content: space-between; align-items: center; }
+    .chat-header span { font-weight: 600; font-size: 0.95rem; }
+    .leave-btn { background: transparent; border: 1px solid #f85149; color: #f85149; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; cursor: default; }
+    .messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+    .msg { }
+    .msg-header { display: flex; align-items: center; gap: 10px; margin-bottom: 3px; }
+    .msg-user { font-size: 0.82rem; font-weight: 600; color: #58a6ff; }
+    .msg-time { font-size: 0.72rem; color: #484f58; }
+    .msg-del { margin-left: auto; background: transparent; border: 1px solid #f85149; color: #f85149; border-radius: 4px; padding: 2px 8px; font-size: 0.7rem; cursor: default; }
+    .msg-text { font-size: 0.85rem; color: #e6edf3; }
+    .chat-input { padding: 12px 16px; border-top: 1px solid #21262d; display: flex; gap: 8px; }
+    .chat-input input { flex: 1; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 8px 12px; color: #e6edf3; font-size: 0.85rem; font-family: inherit; outline: none; }
+    .send-btn { background: #1f6feb; color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 0.85rem; cursor: default; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Messaging Service App</h1>
+    <div class="subtitle">Flask · Socket.IO · JavaScript · Bootstrap 5</div>
+  </div>
+  <div class="header-links">
+    <a class="btn btn-secondary" href="https://github.com/Halkhoori2000/Messaging-Service-App" target="_blank">GitHub</a>
+  </div>
+</header>
+
+<main>
+
+  <div class="hero">
+    <h2>Real-Time Multi-Channel Chat</h2>
+    <p>Create channels, send messages, and delete your own posts — all in real time via Socket.IO. Built with Flask on the backend and a hand-rolled JavaScript component system on the frontend.</p>
+    <div class="badge-row">
+      <span class="badge">Python</span>
+      <span class="badge">Flask</span>
+      <span class="badge">Flask-SocketIO</span>
+      <span class="badge">WebSockets</span>
+      <span class="badge">JavaScript</span>
+      <span class="badge">Bootstrap 5</span>
+      <span class="badge">In-memory storage</span>
+    </div>
+  </div>
+
+  <section>
+    <h3>App Screen</h3>
+    <div class="screen">
+      <div class="screen-bar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+        <div class="url">localhost:5000 — Welcome hamdan!</div>
+      </div>
+      <div class="chat-layout">
+        <div class="sidebar">
+          <h5>Channels</h5>
+          <button class="new-channel-btn">+ Open Channel</button>
+          <button class="channel-btn active"># general</button>
+          <button class="channel-btn"># engineering</button>
+          <button class="channel-btn"># random</button>
+        </div>
+        <div class="chat-main">
+          <div class="chat-header">
+            <span># general</span>
+            <button class="leave-btn">Leave Channel</button>
+          </div>
+          <div class="messages">
+            <div class="msg">
+              <div class="msg-header">
+                <span class="msg-user">sarah</span>
+                <span class="msg-time">5/21/2026, 9:02:11 AM</span>
+              </div>
+              <div class="msg-text">Hey everyone! Anyone working on the Flask project?</div>
+            </div>
+            <div class="msg">
+              <div class="msg-header">
+                <span class="msg-user">hamdan</span>
+                <span class="msg-time">5/21/2026, 9:04:33 AM</span>
+                <button class="msg-del">Delete</button>
+              </div>
+              <div class="msg-text">Yes — just finished the Socket.IO event handlers. Real-time updates are working nicely.</div>
+            </div>
+            <div class="msg">
+              <div class="msg-header">
+                <span class="msg-user">mark</span>
+                <span class="msg-time">5/21/2026, 9:06:55 AM</span>
+              </div>
+              <div class="msg-text">Nice! Does it handle multiple channels independently? I want to test the room isolation.</div>
+            </div>
+            <div class="msg">
+              <div class="msg-header">
+                <span class="msg-user">hamdan</span>
+                <span class="msg-time">5/21/2026, 9:08:12 AM</span>
+                <button class="msg-del">Delete</button>
+              </div>
+              <div class="msg-text">Yes — each channel is a Socket.IO room. join_room / leave_room on every channel switch.</div>
+            </div>
+          </div>
+          <div class="chat-input">
+            <input type="text" placeholder="Message" value="Sounds good, joining now..." readonly />
+            <button class="send-btn">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h3>What It Does</h3>
+    <div class="features">
+      <div class="feature-card">
+        <div class="icon">💬</div>
+        <h4>Real-Time Messaging</h4>
+        <p>Messages broadcast instantly to all users in the same channel via Socket.IO room events — no polling or page reloads.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">📢</div>
+        <h4>Multi-Channel</h4>
+        <p>Users create named channels and switch between them. Each channel maintains its own message history capped at 100 messages.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🗑️</div>
+        <h4>Message Deletion</h4>
+        <p>Users can delete their own messages. Deletions broadcast to all channel members and remove instantly from every client's view.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">⚡</div>
+        <h4>No Framework</h4>
+        <p>The entire UI is built with a hand-rolled el() component system — functionally equivalent to React.createElement but in ~30 lines.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h3>Socket.IO Events</h3>
+    <div class="schema-block">
+<pre><span class="comment">-- Client → Server</span>
+login    { username }                       → restore session, return channels
+join     { username, channel }             → join Socket.IO room, return history
+open     { channel }                       → create channel, broadcast to all
+send     { username, message }             → append + broadcast to room
+delete   { username, message, timestamp }  → remove + broadcast to room
+leave    { username }                      → leave room
+logout   { username }                      → remove user, clear localStorage
+
+<span class="comment">-- In-memory storage: channels dict → list of messages (max 100)</span></pre>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>Built by <a href="https://github.com/Halkhoori2000" target="_blank">Hamdan Alkhoori</a> &nbsp;·&nbsp; The Pennsylvania State University</p>
+</footer>
+
+</body>
+</html>
