@@ -1,5 +1,7 @@
 # Messaging Service App — Flask, Socket.IO, JavaScript
 
+*CMPSC 297 — Special Topics · The Pennsylvania State University · 2023*
+
 **[Live Showcase →](https://halkhoori2000.github.io/Messaging-Service-App/)**
 
 A real-time multi-channel chat application where users log in, create channels, send messages, and delete their own messages — all without page reloads. Built with Flask-SocketIO on the backend and a hand-rolled JavaScript component system on the frontend.
@@ -68,4 +70,5 @@ python3 application.py
 
 ## Course
 
-The Pennsylvania State University
+CMPSC 297 — Special Topics  
+The Pennsylvania State University · 2023
